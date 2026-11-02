@@ -1,7 +1,7 @@
 package entity;
 
 public class Rock extends Entity{
-    public Rock() {
-        super("Камень");
+    public Rock(long id, EntityType entityType) {
+        super(id, entityType);
     }
 }

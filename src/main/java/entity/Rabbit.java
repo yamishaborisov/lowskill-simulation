@@ -1,8 +1,9 @@
 package entity;
 
-public class Rabbit extends Creature{
+import config.AnimalSettings;
 
-    public Rabbit(Integer age) {
-        super("Кролик", age);
+public class Rabbit extends Herbivore {
+    public Rabbit(long id, AnimalSettings settings, int currentTurn) {
+        super(id, EntityType.RABBIT, settings, currentTurn);
     }
 }

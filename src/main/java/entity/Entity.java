@@ -1,13 +1,19 @@
 package entity;
 
 public abstract class Entity {
-    private final String name;
+    private final EntityType entityType;
+    private final long id;
 
-    protected Entity(String name) {
-        this.name = name;
+    protected Entity(long id, EntityType entityType) {
+        this.id = id;
+        this.entityType = entityType;
     }
 
-    public String getName(){
-        return this.name;
+    public long getId() {
+        return id;
+    }
+
+    public EntityType getentityType(){
+        return this.entityType;
     }
 }

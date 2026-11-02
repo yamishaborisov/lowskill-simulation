@@ -1,9 +1,11 @@
 package ru.boris.simulation;
 
+import simulation.Simulation;
+
+
 public class Main {
     public static void main(String[] args) {
-        System.out.println("Simulation started");
+        Simulation simulation = new Simulation();
+        simulation.start();
     }
 }
-
-//Создать `Entity`, `Creature`, `Rabbit`, `Sheep`, `Grass` и `Rock`. Проверить названия, возраст и взросление.
