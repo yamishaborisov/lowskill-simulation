@@ -2,13 +2,19 @@ package world;
 
 import entity.Entity;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class World {
 
     public World(int width, int height){
-
+        if (width <= 0 || height <= 0) {
+            throw new IllegalArgumentException(
+                    "Ширина и высота мира должны быть положительными"
+            );
+        }
         this.width = width;
         this.height = height;
     }
@@ -24,30 +30,31 @@ public class World {
         return height;
     }
 
-   private final HashMap<Position, Entity> worldMap = new HashMap<>();
+   private final HashMap<Coordinates, Entity> worldMap = new HashMap<>();
 
 
-    public Map<Position, Entity> getWorldMap(){
+    public Map<Coordinates, Entity> getWorldMap(){
         return Map.copyOf(worldMap);
     }
 
-    private boolean isPositionInsideWorld(Position position){
-        return position.x() >= 0 && position.x() < width && position.y() >= 0 && position.y() < height;
+    private boolean areCoordinatesInsideWorld(Coordinates coordinates){
+        return coordinates.x() >= 0 && coordinates.x() < width && coordinates.y() >= 0 && coordinates.y() < height;
     }
 
-    private boolean isPositionOccupied(Position position){
-        return worldMap.containsKey(position);
+    private boolean areCoordinatesOccupied(Coordinates coordinates){
+        return worldMap.containsKey(coordinates);
     }
 
-    public void placeEntity(Position position, Entity entity){
-        if (!isPositionInsideWorld(position) || isPositionOccupied(position)){
-            return;
+    public boolean placeEntity(Coordinates coordinates, Entity entity){
+        if (!areCoordinatesInsideWorld(coordinates) || areCoordinatesOccupied(coordinates)){
+            return false;
         }
-        worldMap.put(position, entity);
+        worldMap.put(coordinates, entity);
+        return true;
     }
 
-    public boolean replaceEntity(Position from, Position to) {
-        if (!isPositionInsideWorld(to) || isPositionOccupied(to)) {
+    public boolean replaceEntity(Coordinates from, Coordinates to) {
+        if (!areCoordinatesInsideWorld(to) || areCoordinatesOccupied(to)) {
             return false;
         }
 
@@ -61,10 +68,30 @@ public class World {
         return true;
     }
 
-    public void removeEntity(Position position){
-        if(isPositionOccupied(position) && isPositionInsideWorld(position)){
-            worldMap.remove(position);
+    public void removeEntity(Coordinates coordinates){
+        if(areCoordinatesOccupied(coordinates) && areCoordinatesInsideWorld(coordinates)){
+            worldMap.remove(coordinates);
         }
+    }
+
+    public Entity getEntityAt(Coordinates coordinates){
+            return worldMap.get(coordinates);
+    }
+
+    public boolean isCellAvailable(Coordinates coordinates){
+        return areCoordinatesInsideWorld(coordinates)
+                && !areCoordinatesOccupied(coordinates);
+    }
+
+    public List<Coordinates> getNeighborsCoordinates(Coordinates coordinates) {
+        List<Coordinates> neighborsCoordinates = new ArrayList<>();
+        for (Direction direction : Direction.values()) {
+            Coordinates neighborCoordinates = coordinates.step(direction);
+            if (areCoordinatesInsideWorld(neighborCoordinates)) {
+                neighborsCoordinates.add(neighborCoordinates);
+            }
+        }
+        return neighborsCoordinates;
     }
 
 }

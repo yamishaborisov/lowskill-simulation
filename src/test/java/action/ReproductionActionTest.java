@@ -6,7 +6,7 @@ import entity.*;
 import org.junit.jupiter.api.Test;
 import simulation.IdGenerator;
 import simulation.TurnStatistics;
-import world.Position;
+import world.Coordinates;
 import world.World;
 
 import java.util.List;
@@ -16,7 +16,7 @@ import java.util.Random;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ReproductionActionTest {
-    private final AnimalSettings settings = new AnimalSettings(0, 10, 4, 5);
+    private final AnimalSettings settings = new AnimalSettings(0, 10, 4, 5, true);
     private final SimulationConfig config = new SimulationConfig(
             3, 3, 10, Map.of(),
             Map.of(EntityType.RABBIT, settings, EntityType.SHEEP, settings, EntityType.WOLF, settings),
@@ -29,7 +29,7 @@ class ReproductionActionTest {
     void grassWaitsForIntervalAndResetsItAfterBirth() {
         World world = new World(3, 3);
         Grass parent = new Grass(ids.nextId(), 0, 5);
-        world.placeEntity(new Position(1, 1), parent);
+        world.placeEntity(new Coordinates(1, 1), parent);
 
         action.execute(world, 4, new TurnStatistics());
         assertEquals(1, world.getWorldMap().size());
@@ -47,22 +47,52 @@ class ReproductionActionTest {
 
     @Test
     void animalsAtHungerLimitProduceHealthyFedChildrenOfSameSpecies() {
-        for (EntityType type : List.of(EntityType.RABBIT, EntityType.SHEEP, EntityType.WOLF)) {
+        for (EntityType type : List.of(EntityType.RABBIT, EntityType.SHEEP)) {
             World world = new World(3, 3);
             Creature parent = (Creature) EntityFactory.create(type, ids.nextId(), config, 0);
             parent.increaseHunger(30);
             parent.takeDamage(3);
-            world.placeEntity(new Position(1, 1), parent);
+            world.placeEntity(new Coordinates(1, 1), parent);
 
             action.execute(world, 5, new TurnStatistics());
 
             Creature child = (Creature) childOf(world, parent);
-            assertEquals(type, child.getentityType());
+            assertEquals(type, child.getEntityType());
             assertEquals(10, child.getHealth());
             assertEquals(0, child.getHunger());
             assertEquals(7, parent.getHealth());
             assertFalse(parent.canReproduce(5, 30));
         }
+    }
+
+    @Test
+    void disabledAnimalDoesNotProduceOffspring() {
+        World world = new World(3, 3);
+        Rabbit parent = new Rabbit(ids.nextId(), new AnimalSettings(0, 10, 4, 5, false), 0);
+        world.placeEntity(new Coordinates(1, 1), parent);
+        TurnStatistics statistics = new TurnStatistics();
+
+        action.execute(world, 5, statistics);
+
+        assertEquals(1, world.getWorldMap().size());
+        assertSame(parent, world.getEntityAt(new Coordinates(1, 1)));
+        assertEquals(0, statistics.getBirthCount());
+    }
+
+    @Test
+    void actionUsesPreparedSettingsInsteadOfCheckingWolfAnnotation() {
+        World world = new World(3, 3);
+        Wolf parent = new Wolf(ids.nextId(), settings, 0);
+        world.placeEntity(new Coordinates(1, 1), parent);
+        TurnStatistics statistics = new TurnStatistics();
+
+        action.execute(world, 5, statistics);
+
+        Creature child = (Creature) childOf(world, parent);
+        assertInstanceOf(Wolf.class, child);
+        assertFalse(child.canReproduce(9, 30));
+        assertTrue(child.canReproduce(10, 30));
+        assertEquals(1, statistics.getBirthCount());
     }
 
     @Test
@@ -73,11 +103,11 @@ class ReproductionActionTest {
         Rabbit dead = new Rabbit(ids.nextId(), settings, 0);
         dead.takeDamage(10);
         Grass removed = new Grass(ids.nextId(), 0, 5);
-        world.placeEntity(new Position(0, 0), hungry);
-        world.placeEntity(new Position(1, 0), dead);
-        world.placeEntity(new Position(2, 0), removed);
-        world.removeEntity(new Position(2, 0));
-        world.placeEntity(new Position(3, 0), new Rock(ids.nextId(), EntityType.ROCK));
+        world.placeEntity(new Coordinates(0, 0), hungry);
+        world.placeEntity(new Coordinates(1, 0), dead);
+        world.placeEntity(new Coordinates(2, 0), removed);
+        world.removeEntity(new Coordinates(2, 0));
+        world.placeEntity(new Coordinates(3, 0), new Rock(ids.nextId()));
 
         action.execute(world, 5, new TurnStatistics());
 
@@ -89,12 +119,12 @@ class ReproductionActionTest {
     void fullWorldDoesNotResetIntervalAndParentRetriesNextTurn() {
         World world = new World(2, 1);
         Grass parent = new Grass(ids.nextId(), 0, 5);
-        world.placeEntity(new Position(0, 0), parent);
-        world.placeEntity(new Position(1, 0), new Rock(ids.nextId(), EntityType.ROCK));
+        world.placeEntity(new Coordinates(0, 0), parent);
+        world.placeEntity(new Coordinates(1, 0), new Rock(ids.nextId()));
 
         action.execute(world, 5, new TurnStatistics());
         assertTrue(parent.canReproduce(5, 30));
-        world.removeEntity(new Position(1, 0));
+        world.removeEntity(new Coordinates(1, 0));
         action.execute(world, 6, new TurnStatistics());
 
         assertEquals(2, world.getWorldMap().size());
@@ -107,8 +137,8 @@ class ReproductionActionTest {
         World world = new World(3, 1);
         Grass first = new Grass(ids.nextId(), 0, 5);
         Grass second = new Grass(ids.nextId(), 0, 5);
-        world.placeEntity(new Position(0, 0), first);
-        world.placeEntity(new Position(2, 0), second);
+        world.placeEntity(new Coordinates(0, 0), first);
+        world.placeEntity(new Coordinates(2, 0), second);
 
         action.execute(world, 5, new TurnStatistics());
 
@@ -118,8 +148,8 @@ class ReproductionActionTest {
 
     @Test
     void selectsFreeNeighboursInDirectionOrder() {
-        List<Position> expected = List.of(
-                new Position(1, 2), new Position(2, 1), new Position(1, 0), new Position(0, 1)
+        List<Coordinates> expected = List.of(
+                new Coordinates(1, 2), new Coordinates(2, 1), new Coordinates(1, 0), new Coordinates(0, 1)
         );
         for (int index = 0; index < expected.size(); index++) {
             final int choice = index;
@@ -132,7 +162,7 @@ class ReproductionActionTest {
             };
             World world = new World(3, 3);
             Grass parent = new Grass(ids.nextId(), 0, 5);
-            world.placeEntity(new Position(1, 1), parent);
+            world.placeEntity(new Coordinates(1, 1), parent);
 
             new ReproductionAction(config, ids, random).execute(world, 5, new TurnStatistics());
 
@@ -145,7 +175,7 @@ class ReproductionActionTest {
     void newbornSkipsAllPhasesOfBirthTurn() {
         World world = new World(3, 1);
         Rabbit parent = new Rabbit(ids.nextId(), settings, 0);
-        world.placeEntity(new Position(1, 0), parent);
+        world.placeEntity(new Coordinates(1, 0), parent);
         List<Action> actions = List.of(
                 new HungerAction(10, 2), new MovementAction(new Random(0)),
                 new FeedingAction(40, 2), action
@@ -165,17 +195,18 @@ class ReproductionActionTest {
 
     @Test
     void failedPlacementDoesNotResetParentInterval() {
-        Position parentPosition = new Position(0, 0);
+        Coordinates parentCoordinates = new Coordinates(0, 0);
         World world = new World(2, 1) {
             @Override
-            public void placeEntity(Position position, Entity entity) {
-                if (position.equals(parentPosition)) {
-                    super.placeEntity(position, entity);
+            public boolean placeEntity(Coordinates coordinates, Entity entity) {
+                if (coordinates.equals(parentCoordinates)) {
+                    return super.placeEntity(coordinates, entity);
                 }
+                return false;
             }
         };
         Grass parent = new Grass(ids.nextId(), 0, 5);
-        world.placeEntity(parentPosition, parent);
+        world.placeEntity(parentCoordinates, parent);
 
         action.execute(world, 5, new TurnStatistics());
 

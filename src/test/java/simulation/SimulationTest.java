@@ -3,6 +3,7 @@ package simulation;
 import config.ConfigLoader;
 import config.SimulationConfig;
 import entity.EntityType;
+import entity.Creature;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -16,6 +17,32 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SimulationTest {
+    @Test
+    void initializationAppliesAnnotationsToExplicitlySuppliedConfig() {
+        SimulationConfig config = config(3, 1, 0, Map.of(EntityType.WOLF, 1, EntityType.RABBIT, 1));
+        assertTrue(config.animalSettings().get(EntityType.WOLF).reproductionEnabled());
+        Simulation simulation = new Simulation(config);
+
+        run(simulation);
+
+        for (var entity : simulation.getWorld().getWorldMap().values()) {
+            Creature animal = (Creature) entity;
+            assertEquals(animal.getEntityType() == EntityType.RABBIT, animal.canReproduce(100, 100));
+        }
+        assertTrue(config.animalSettings().get(EntityType.WOLF).reproductionEnabled());
+    }
+
+    @Test
+    void secondStartIsRejectedWithoutChangingWorld() {
+        Simulation simulation = new Simulation(config(2, 2, 0, Map.of(EntityType.GRASS, 2)));
+        run(simulation);
+        var initial = simulation.getWorld().getWorldMap();
+
+        assertThrows(IllegalStateException.class, simulation::start);
+
+        assertEquals(initial, simulation.getWorld().getWorldMap());
+    }
+
     @Test
     void zeroTurnsPrintsOnlyInitialState() {
         Simulation simulation = new Simulation(config(12, 8, 0, ConfigLoader.load().initialCounts()));
@@ -92,7 +119,7 @@ class SimulationTest {
         PrintStream original = System.out;
         try (PrintStream output = new PrintStream(bytes, true, StandardCharsets.UTF_8)) {
             System.setOut(output);
-            assertTimeoutPreemptively(Duration.ofSeconds(5), () -> simulation.start(0));
+            assertTimeoutPreemptively(Duration.ofSeconds(5), simulation::start);
         } finally {
             System.setOut(original);
         }

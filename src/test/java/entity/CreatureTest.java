@@ -6,7 +6,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CreatureTest {
-    private final Rabbit rabbit = new Rabbit(1, new AnimalSettings(2, 6, 0, 5), 0);
+    private final Rabbit rabbit = new Rabbit(1, new AnimalSettings(2, 6, 0, 5, true), 0);
+
+    @Test
+    void reproductionCanBeDisabledDespiteSatisfiedHealthHungerAndInterval() {
+        Rabbit disabled = new Rabbit(2, new AnimalSettings(2, 6, 0, 5, false), 0);
+
+        assertTrue(rabbit.canReproduce(5, 0));
+        assertFalse(disabled.canReproduce(5, 0));
+        assertFalse(disabled.canReproduce(100, 100));
+    }
 
     @Test
     void damageIsClampedAtZero() {

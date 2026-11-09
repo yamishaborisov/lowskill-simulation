@@ -33,9 +33,7 @@ public class EntityFactory {
                     config.grassReproductionInterval()
             );
             case ROCK -> new Rock(
-                    id,
-                    EntityType.ROCK
-
+                    id
             );
         };
     }

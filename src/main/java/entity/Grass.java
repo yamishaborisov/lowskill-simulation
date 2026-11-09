@@ -7,6 +7,9 @@ public class Grass extends Entity implements Reproducible {
 
     public Grass(long id, int currentTurn, int reproductionInterval) {
         super(id, EntityType.GRASS);
+        if (reproductionInterval <= 0) {
+            throw new IllegalArgumentException("Интервал размножения должен быть положительным");
+        }
         this.lastReproductionTurn = currentTurn;
         this.reproductionInterval = reproductionInterval;
     }

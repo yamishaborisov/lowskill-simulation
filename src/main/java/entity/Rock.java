@@ -1,7 +1,7 @@
 package entity;
 
 public class Rock extends Entity{
-    public Rock(long id, EntityType entityType) {
-        super(id, entityType);
+    public Rock(long id) {
+        super(id, EntityType.ROCK);
     }
 }

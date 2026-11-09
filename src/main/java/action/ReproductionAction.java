@@ -6,8 +6,7 @@ import entity.EntityFactory;
 import entity.Reproducible;
 import simulation.IdGenerator;
 import simulation.TurnStatistics;
-import world.Direction;
-import world.Position;
+import world.Coordinates;
 import world.World;
 
 import java.util.ArrayList;
@@ -34,35 +33,29 @@ public class ReproductionAction implements Action {
                 continue;
             }
 
-            List<Position> freeNeighbours = freeNeighbours(world, entry.getKey());
+            List<Coordinates> freeNeighbours = freeNeighbours(world, entry.getKey());
             if (freeNeighbours.isEmpty()) {
                 continue;
             }
 
-            Position position = freeNeighbours.get(random.nextInt(freeNeighbours.size()));
-            Entity child = EntityFactory.create(parent.getentityType(), idGenerator.nextId(), config, currentTurn);
-            world.placeEntity(position, child);
-            if (world.getWorldMap().get(position) == child) {
+            Coordinates coordinates = freeNeighbours.get(random.nextInt(freeNeighbours.size()));
+            Entity child = EntityFactory.create(parent.getEntityType(), idGenerator.nextId(), config, currentTurn);
+            if (world.placeEntity(coordinates, child)) {
                 reproducible.markReproduced(currentTurn);
                 statistics.recordBirth();
             }
         }
     }
 
-    private List<Position> freeNeighbours(World world, Position position) {
-        List<Position> neighbours = new ArrayList<>();
-        var occupied = world.getWorldMap();
-        for (Direction direction : Direction.values()) {
-            Position neighbour = new Position(
-                    position.x() + direction.getDeltaX(),
-                    position.y() + direction.getDeltaY()
-            );
-            if (neighbour.x() >= 0 && neighbour.x() < world.getWidth()
-                    && neighbour.y() >= 0 && neighbour.y() < world.getHeight()
-                    && !occupied.containsKey(neighbour)) {
-                neighbours.add(neighbour);
+    private List<Coordinates> freeNeighbours(World world, Coordinates parentCoordinates) {
+        List<Coordinates> freeCoordinates = new ArrayList<>();
+
+        for (Coordinates coordinates : world.getNeighborsCoordinates(parentCoordinates)) {
+            if (world.isCellAvailable(coordinates)) {
+                freeCoordinates.add(coordinates);
             }
         }
-        return neighbours;
+
+        return freeCoordinates;
     }
 }

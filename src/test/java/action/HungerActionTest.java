@@ -1,12 +1,11 @@
 package action;
 
 import config.AnimalSettings;
-import entity.EntityType;
 import entity.Rabbit;
 import entity.Rock;
 import org.junit.jupiter.api.Test;
 import simulation.TurnStatistics;
-import world.Position;
+import world.Coordinates;
 import world.World;
 
 import java.util.Random;
@@ -15,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class HungerActionTest {
     private final TurnStatistics statistics = new TurnStatistics();
-    private final Position start = new Position(1, 1);
+    private final Coordinates start = new Coordinates(1, 1);
 
     @Test
     void increasesHungerWithoutDamageBelowLimit() {
@@ -71,16 +70,16 @@ class HungerActionTest {
         World world = new World(3, 3);
         Rabbit rabbit = rabbit(2);
         rabbit.takeDamage(2);
-        Rock rock = new Rock(2, EntityType.ROCK);
-        Position rockPosition = new Position(0, 0);
+        Rock rock = new Rock(2);
+        Coordinates rockCoordinates = new Coordinates(0, 0);
         world.placeEntity(start, rabbit);
-        world.placeEntity(rockPosition, rock);
+        world.placeEntity(rockCoordinates, rock);
         HungerAction action = new HungerAction(20, 2);
 
         action.execute(world, 1, statistics);
 
         assertEquals(0, rabbit.getHunger());
-        assertSame(rock, world.getWorldMap().get(rockPosition));
+        assertSame(rock, world.getWorldMap().get(rockCoordinates));
         assertEquals(0, statistics.getStarvedCount());
     }
 
@@ -91,6 +90,6 @@ class HungerActionTest {
     }
 
     private Rabbit rabbit(int health) {
-        return new Rabbit(1, new AnimalSettings(1, health, 0, 5), 0);
+        return new Rabbit(1, new AnimalSettings(1, health, 0, 5, true), 0);
     }
 }

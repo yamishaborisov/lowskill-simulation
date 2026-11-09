@@ -4,7 +4,8 @@ public record AnimalSettings(
         int maxSpeed,
         int maxHealth,
         int attackDamage,
-        int reproductionInterval
+        int reproductionInterval,
+        boolean reproductionEnabled
 ) {
     public AnimalSettings {
         if (maxSpeed < 0) {

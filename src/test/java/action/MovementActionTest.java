@@ -1,7 +1,6 @@
 package action;
 
 import config.AnimalSettings;
-import entity.EntityType;
 import entity.Rabbit;
 import entity.Rock;
 import entity.Grass;
@@ -9,7 +8,7 @@ import entity.Wolf;
 import org.junit.jupiter.api.Test;
 import simulation.TurnStatistics;
 import world.Direction;
-import world.Position;
+import world.Coordinates;
 import world.World;
 
 import java.util.Random;
@@ -22,13 +21,13 @@ class MovementActionTest {
     void hungryRabbitWaitsForAdjacentGrassAndThenEats() {
         for (Direction direction : Direction.values()) {
             World world = new World(5, 5);
-            Position start = new Position(2, 2);
+            Coordinates start = new Coordinates(2, 2);
             Rabbit rabbit = rabbitWithSpeed(2);
             rabbit.increaseHunger(20);
-            Position foodPosition = new Position(start.x() + direction.getDeltaX(),
+            Coordinates foodCoordinates = new Coordinates(start.x() + direction.getDeltaX(),
                     start.y() + direction.getDeltaY());
             world.placeEntity(start, rabbit);
-            world.placeEntity(foodPosition, new Grass(2, 0, 4));
+            world.placeEntity(foodCoordinates, new Grass(2, 0, 4));
             TurnStatistics statistics = new TurnStatistics();
 
             // No random direction or distance is needed when food is adjacent.
@@ -38,7 +37,7 @@ class MovementActionTest {
             assertEquals(0, statistics.getEatenGrassCount());
 
             new FeedingAction(40, 2).execute(world, 1, statistics);
-            assertFalse(world.getWorldMap().containsKey(foodPosition));
+            assertFalse(world.getWorldMap().containsKey(foodCoordinates));
             assertEquals(0, rabbit.getHunger());
             assertEquals(1, statistics.getEatenGrassCount());
         }
@@ -48,13 +47,13 @@ class MovementActionTest {
     void satiatedRabbitStillMovesPastAdjacentGrass() {
         World world = new World(5, 5);
         Rabbit rabbit = rabbitWithSpeed(2);
-        world.placeEntity(new Position(2, 2), rabbit);
-        world.placeEntity(new Position(2, 3), new Grass(2, 0, 4));
+        world.placeEntity(new Coordinates(2, 2), rabbit);
+        world.placeEntity(new Coordinates(2, 3), new Grass(2, 0, 4));
         TurnStatistics statistics = new TurnStatistics();
 
         new MovementAction(new FixedRandom(1, 1)).execute(world, 1, statistics);
 
-        assertSame(rabbit, world.getWorldMap().get(new Position(3, 2)));
+        assertSame(rabbit, world.getWorldMap().get(new Coordinates(3, 2)));
         assertEquals(1, statistics.getMovedCount());
     }
 
@@ -63,25 +62,25 @@ class MovementActionTest {
         World world = new World(5, 5);
         Rabbit rabbit = rabbitWithSpeed(2);
         rabbit.increaseHunger(20);
-        world.placeEntity(new Position(2, 2), rabbit);
-        world.placeEntity(new Position(1, 3), new Grass(2, 0, 4));
+        world.placeEntity(new Coordinates(2, 2), rabbit);
+        world.placeEntity(new Coordinates(1, 3), new Grass(2, 0, 4));
         TurnStatistics statistics = new TurnStatistics();
 
         new MovementAction(new FixedRandom(1, 1)).execute(world, 1, statistics);
 
-        assertSame(rabbit, world.getWorldMap().get(new Position(3, 2)));
+        assertSame(rabbit, world.getWorldMap().get(new Coordinates(3, 2)));
         assertEquals(1, statistics.getMovedCount());
     }
 
     @Test
     void hungryWolfWaitsForPreyAndAttacksDuringFeeding() {
         World world = new World(5, 5);
-        Wolf wolf = new Wolf(1, new AnimalSettings(3, 16, 4, 8), 0);
+        Wolf wolf = new Wolf(1, new AnimalSettings(3, 16, 4, 8, true), 0);
         wolf.increaseHunger(20);
-        Rabbit prey = new Rabbit(2, new AnimalSettings(0, 6, 0, 5), 0);
-        Position start = new Position(2, 2);
+        Rabbit prey = new Rabbit(2, new AnimalSettings(0, 6, 0, 5, true), 0);
+        Coordinates start = new Coordinates(2, 2);
         world.placeEntity(start, wolf);
-        world.placeEntity(new Position(2, 3), prey);
+        world.placeEntity(new Coordinates(2, 3), prey);
         TurnStatistics statistics = new TurnStatistics();
 
         new MovementAction(new FixedRandom(1, 0)).execute(world, 1, statistics);
@@ -98,7 +97,7 @@ class MovementActionTest {
     void stopsAtWorldBorder() {
         World world = new World(5, 3);
         Rabbit rabbit = rabbitWithSpeed(2);
-        Position start = new Position(0, 0);
+        Coordinates start = new Coordinates(0, 0);
         world.placeEntity(start, rabbit);
 
         new MovementAction(new FixedRandom(2, 2)).execute(world);
@@ -110,19 +109,19 @@ class MovementActionTest {
     void stopsBeforeOccupiedCell() {
         World world = new World(5, 3);
         Rabbit rabbit = rabbitWithSpeed(4);
-        world.placeEntity(new Position(1, 1), rabbit);
-        world.placeEntity(new Position(3, 1), new Rock(2, EntityType.ROCK));
+        world.placeEntity(new Coordinates(1, 1), rabbit);
+        world.placeEntity(new Coordinates(3, 1), new Rock(2));
 
         new MovementAction(new FixedRandom(1, 4)).execute(world);
 
-        assertSame(rabbit, world.getWorldMap().get(new Position(2, 1)));
+        assertSame(rabbit, world.getWorldMap().get(new Coordinates(2, 1)));
     }
 
     @Test
     void doesNotMoveWhenSpeedIsZero() {
         World world = new World(5, 3);
         Rabbit rabbit = rabbitWithSpeed(0);
-        Position start = new Position(2, 1);
+        Coordinates start = new Coordinates(2, 1);
         world.placeEntity(start, rabbit);
 
         new MovementAction(new FixedRandom(1, 0)).execute(world);
@@ -134,12 +133,12 @@ class MovementActionTest {
     void stopsWhenAllNeighboursAreOccupied() {
         World world = new World(3, 3);
         Rabbit rabbit = rabbitWithSpeed(1);
-        Position start = new Position(1, 1);
+        Coordinates start = new Coordinates(1, 1);
         world.placeEntity(start, rabbit);
-        world.placeEntity(new Position(1, 2), new Rock(2, EntityType.ROCK));
-        world.placeEntity(new Position(2, 1), new Rock(3, EntityType.ROCK));
-        world.placeEntity(new Position(1, 0), new Rock(4, EntityType.ROCK));
-        world.placeEntity(new Position(0, 1), new Rock(5, EntityType.ROCK));
+        world.placeEntity(new Coordinates(1, 2), new Rock(2));
+        world.placeEntity(new Coordinates(2, 1), new Rock(3));
+        world.placeEntity(new Coordinates(1, 0), new Rock(4));
+        world.placeEntity(new Coordinates(0, 1), new Rock(5));
 
         new MovementAction(new FixedRandom(1, 1)).execute(world);
 
@@ -150,15 +149,15 @@ class MovementActionTest {
     void movesOnlyUntilWorldBorder() {
         World world = new World(5, 3);
         Rabbit rabbit = rabbitWithSpeed(4);
-        world.placeEntity(new Position(3, 1), rabbit);
+        world.placeEntity(new Coordinates(3, 1), rabbit);
 
         new MovementAction(new FixedRandom(1, 4)).execute(world);
 
-        assertSame(rabbit, world.getWorldMap().get(new Position(4, 1)));
+        assertSame(rabbit, world.getWorldMap().get(new Coordinates(4, 1)));
     }
 
     private Rabbit rabbitWithSpeed(int maxSpeed) {
-        AnimalSettings settings = new AnimalSettings(maxSpeed, 6, 0, 5);
+        AnimalSettings settings = new AnimalSettings(maxSpeed, 6, 0, 5, true);
         return new Rabbit(1, settings, 0);
     }
 

@@ -2,11 +2,13 @@ package action;
 
 import entity.Creature;
 import entity.Entity;
-import entity.Grass;
 import simulation.TurnStatistics;
-import world.Direction;
-import world.Position;
+import world.Coordinates;
 import world.World;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class FeedingAction implements Action{
     private final int hungerReductionPerMeal;
@@ -23,50 +25,26 @@ public class FeedingAction implements Action{
 
     @Override
     public void execute(World world, int currentTurn, TurnStatistics statistics) {
-        for (var entry : world.getWorldMap().entrySet()) {
-            if (!(entry.getValue() instanceof Creature creature) || !creature.isAlive()
-                    || creature.getHunger() == 0) {
+
+        List<Map.Entry<Coordinates, Entity>> entities =
+                new ArrayList<>(world.getWorldMap().entrySet());
+
+        for (Map.Entry<Coordinates, Entity> entry : entities) {
+            if (!(entry.getValue() instanceof Creature creature)) {
                 continue;
             }
-            Position foodPosition = findFood(world, entry.getKey(), creature);
-            if (foodPosition == null){
-                continue;
-            }
-            Entity food = world.getWorldMap().get(foodPosition);
 
-            if (food instanceof Grass) {
-                world.removeEntity(foodPosition);
-                statistics.recordGrassEaten();
-                creature.eat(hungerReductionPerMeal, healingPerMeal);
-            }
-            else if (food instanceof Creature prey) {
-                prey.takeDamage(creature.getAttackDamage());
-                statistics.recordAttack();
-
-                if (!prey.isAlive()) {
-                    world.removeEntity(foodPosition);
+            switch (creature.tryToEat(world,entry.getKey(), hungerReductionPerMeal, healingPerMeal)) {
+                case GRASS_EATEN -> statistics.recordGrassEaten();
+                case ATTACKED -> statistics.recordAttack();
+                case PREY_KILLED -> {
+                    statistics.recordAttack();
                     statistics.recordKill();
-                    creature.eat(hungerReductionPerMeal, healingPerMeal);
                 }
-            }
-        }
-    }
-
-    private Position findFood(World world, Position position, Creature creature) {
-
-        for (Direction direction : Direction.values()) {
-            Position neighbour = new Position(
-                    position.x() + direction.getDeltaX(),
-                    position.y() + direction.getDeltaY()
-            );
-
-            Entity target = world.getWorldMap().get(neighbour);
-
-            if (target != null && creature.canEat(target)) {
-                return neighbour;
+                case NONE -> {}
             }
         }
 
-        return null;
     }
+
 }
